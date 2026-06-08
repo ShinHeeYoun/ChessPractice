@@ -403,3 +403,10 @@ select.difficulty-select option {
   font-weight: 600;
   box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
 }
+
+/* Move Annotations */
+.cls-blunder { color: #ef4444; font-weight: 800; margin-left: 3px; font-style: italic; }
+.cls-mistake { color: #f97316; font-weight: 800; margin-left: 3px; font-style: italic; }
+.cls-inacc { color: #eab308; font-weight: 800; margin-left: 3px; font-style: italic; }
+.cls-great { color: #0ea5e9; font-weight: 800; margin-left: 3px; font-style: italic; }
+.cls-excel { color: #22c55e; font-weight: 800; margin-left: 3px; font-size: 0.9em; }

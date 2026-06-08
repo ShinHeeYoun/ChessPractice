@@ -19,11 +19,16 @@ export default function ChessGame() {
   const engineRef = useRef(null);
   const gameRef = useRef(game);
   const isLiveRef = useRef(true);
+  const currentMoveIndexRef = useRef(currentMoveIndex);
+  
+  // The evaluation before a move was made (used for delta calculation)
+  const prevEvalRef = useRef({ evaluation: 0, evalMate: null });
 
   // Sync refs for engine callback
   useEffect(() => {
     gameRef.current = game;
     isLiveRef.current = currentMoveIndex === moveHistory.length - 1;
+    currentMoveIndexRef.current = currentMoveIndex;
   }, [game, currentMoveIndex, moveHistory]);
 
   const updateStatus = useCallback((currentGame) => {
@@ -50,12 +55,14 @@ export default function ChessGame() {
       
       const move = gameCopy.move({ from, to, promotion });
       if (move) {
+        const beforeEval = { ...prevEvalRef.current };
+        
         setGame(gameCopy);
         setFen(gameCopy.fen());
         updateStatus(gameCopy);
         
         setMoveHistory(prev => {
-          const newHist = [...prev, move];
+          const newHist = [...prev, { ...move, beforeEval }];
           setCurrentMoveIndex(newHist.length - 1);
           return newHist;
         });
@@ -77,17 +84,58 @@ export default function ChessGame() {
       if (line.startsWith('info ') && line.includes('score ')) {
         const matchCp = line.match(/score cp (-?\d+)/);
         const matchMate = line.match(/score mate (-?\d+)/);
+        const matchDepth = line.match(/depth (\d+)/);
+        const depth = matchDepth ? parseInt(matchDepth[1], 10) : 0;
         const isWhite = gameRef.current.turn() === 'w';
         
+        let cp = 0;
+        let mate = null;
+        
         if (matchCp) {
-          let cp = parseInt(matchCp[1], 10);
+          cp = parseInt(matchCp[1], 10);
           if (!isWhite) cp = -cp;
           setEvaluation(cp / 100);
           setEvalMate(null);
+          prevEvalRef.current = { evaluation: cp / 100, evalMate: null };
         } else if (matchMate) {
-          let mate = parseInt(matchMate[1], 10);
+          mate = parseInt(matchMate[1], 10);
           if (!isWhite) mate = -mate;
           setEvalMate(mate);
+          prevEvalRef.current = { evaluation: 0, evalMate: mate };
+        }
+
+        // Live Classification Logic
+        if (depth >= 8) {
+          setMoveHistory(prev => {
+            const idx = currentMoveIndexRef.current;
+            if (idx >= 0 && idx < prev.length) {
+              const move = prev[idx];
+              if (!move.evalDepth || move.evalDepth < depth) {
+                if (move.beforeEval) {
+                  const e1 = move.beforeEval.evalMate !== null 
+                    ? Math.sign(move.beforeEval.evalMate) * 100 
+                    : move.beforeEval.evaluation;
+                    
+                  const e2 = mate !== null 
+                    ? Math.sign(mate) * 100 
+                    : (cp / 100);
+                  
+                  const delta = move.color === 'w' ? (e2 - e1) : (e1 - e2);
+                  
+                  let cls = 'excellent'; // default for acceptable moves
+                  if (delta <= -2.0) cls = 'blunder';
+                  else if (delta <= -1.0) cls = 'mistake';
+                  else if (delta <= -0.5) cls = 'inaccuracy';
+                  else if (delta >= 0.5) cls = 'great';
+                  
+                  const newHist = [...prev];
+                  newHist[idx] = { ...move, classification: cls, evalDepth: depth, delta };
+                  return newHist;
+                }
+              }
+            }
+            return prev;
+          });
         }
       }
 
@@ -153,13 +201,15 @@ export default function ChessGame() {
 
       if (!move) return false;
 
+      const beforeEval = { ...prevEvalRef.current };
+
       setGame(gameCopy);
       setFen(gameCopy.fen());
       updateStatus(gameCopy);
       
       setMoveHistory(prev => {
         const newHist = prev.slice(0, currentMoveIndex + 1);
-        newHist.push(move);
+        newHist.push({ ...move, beforeEval });
         setCurrentMoveIndex(newHist.length - 1);
         return newHist;
       });
@@ -190,15 +240,63 @@ export default function ChessGame() {
     setCurrentMoveIndex(-1);
     setEvaluation(0);
     setEvalMate(null);
+    prevEvalRef.current = { evaluation: 0, evalMate: null };
     updateStatus(newGame);
   };
 
   // Evaluation Bar Math
-  // Limit eval to [-5, 5] for the visual bar height calculation
   const clampedEval = Math.max(-5, Math.min(5, evaluation));
   const whitePercentage = evalMate !== null 
-    ? (evalMate > 0 ? 100 : 0) // White mate => 100%, Black mate => 0%
-    : 50 + (clampedEval * 10); // +5 eval => 100%, -5 eval => 0%
+    ? (evalMate > 0 ? 100 : 0) 
+    : 50 + (clampedEval * 10); 
+
+  // Custom Square Styles based on Move Classification
+  const getCustomSquareStyles = () => {
+    if (currentMoveIndex < 0 || currentMoveIndex >= moveHistory.length) return {};
+    
+    const move = moveHistory[currentMoveIndex];
+    if (!move) return {};
+    
+    // Default highlight for last move
+    const styles = {
+      [move.from]: { backgroundColor: 'rgba(234, 179, 8, 0.3)' },
+      [move.to]: { backgroundColor: 'rgba(234, 179, 8, 0.4)' }
+    };
+    
+    if (move.classification) {
+      const colorMap = {
+        blunder: 'rgba(239, 68, 68, 0.85)',     // Red
+        mistake: 'rgba(249, 115, 22, 0.85)',     // Orange
+        inaccuracy: 'rgba(234, 179, 8, 0.85)',   // Yellow
+        excellent: 'rgba(34, 197, 94, 0.85)',    // Green
+        great: 'rgba(14, 165, 233, 0.85)'        // Blue
+      };
+      
+      const color = colorMap[move.classification];
+      if (color) {
+        styles[move.to] = {
+          ...styles[move.to],
+          backgroundColor: color,
+          borderRadius: '4px',
+          boxShadow: `inset 0 0 15px rgba(0,0,0,0.5)`
+        };
+      }
+    }
+    
+    return styles;
+  };
+
+  const renderMoveAnnotation = (classification) => {
+    if (!classification) return null;
+    switch(classification) {
+      case 'blunder': return <span className="cls-blunder">??</span>;
+      case 'mistake': return <span className="cls-mistake">?</span>;
+      case 'inaccuracy': return <span className="cls-inacc">?!</span>;
+      case 'great': return <span className="cls-great">!</span>;
+      case 'excellent': return <span className="cls-excel">★</span>;
+      default: return null;
+    }
+  };
 
   return (
     <div className="app-container">
@@ -220,6 +318,7 @@ export default function ChessGame() {
           boardOrientation="white"
           customDarkSquareStyle={{ backgroundColor: '#334155' }}
           customLightSquareStyle={{ backgroundColor: '#cbd5e1' }}
+          customSquareStyles={getCustomSquareStyles()}
           animationDuration={200}
         />
       </div>
@@ -227,9 +326,9 @@ export default function ChessGame() {
       <div className="panel-container">
         <p className="status-text">
           {currentMoveIndex !== moveHistory.length - 1 ? (
-            <span className="review-badge">Review Mode</span>
+            <span className="review-badge">Review</span>
           ) : null}
-          {' '}{status}
+          {status}
         </p>
 
         {/* History Navigation */}
@@ -258,6 +357,7 @@ export default function ChessGame() {
                 onClick={() => goToMove(pair.wIndex)}
               >
                 {pair.w.san}
+                {renderMoveAnnotation(pair.w.classification)}
               </span>
               {pair.b && (
                 <span 
@@ -265,6 +365,7 @@ export default function ChessGame() {
                   onClick={() => goToMove(pair.bIndex)}
                 >
                   {pair.b.san}
+                  {renderMoveAnnotation(pair.b.classification)}
                 </span>
               )}
             </div>
