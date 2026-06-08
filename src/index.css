@@ -190,3 +190,100 @@ select.difficulty-select:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Evaluation Bar */
+.eval-bar-container {
+  width: 20px;
+  height: 600px;
+  background: #cbd5e1; /* white's side */
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.eval-bar-fill {
+  width: 100%;
+  background: #475569; /* black's side */
+  transition: height 0.5s ease;
+}
+
+.eval-text {
+  position: absolute;
+  bottom: 10px;
+  width: 100%;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #333;
+  mix-blend-mode: difference;
+}
+
+/* Review Badge */
+.review-badge {
+  background-color: #f59e0b;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Navigation Controls */
+.nav-controls {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.nav-btn {
+  padding: 0.5em;
+  flex: 1;
+  font-size: 0.9rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Move History Grid */
+.move-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.move-number {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.move-san {
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.move-san:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.active-move {
+  background: var(--accent) !important;
+  color: white;
+  font-weight: bold;
+}
