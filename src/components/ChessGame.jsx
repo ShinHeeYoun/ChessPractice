@@ -300,27 +300,30 @@ export default function ChessGame() {
 
   return (
     <div className="app-container">
-      {/* Evaluation Bar */}
-      <div className="eval-bar-container">
-        <div className="eval-bar-fill" style={{ height: `${100 - whitePercentage}%` }} />
-        <div className="eval-text">
-          {evalMate !== null 
-            ? `M${Math.abs(evalMate)}` 
-            : (evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1))}
+      
+      <div className="board-wrapper">
+        {/* Horizontal Evaluation Bar */}
+        <div className="eval-bar-container">
+          <div className="eval-bar-fill" style={{ width: `${100 - whitePercentage}%` }} />
+          <div className="eval-text">
+            {evalMate !== null 
+              ? `M${Math.abs(evalMate)}` 
+              : (evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1))}
+          </div>
         </div>
-      </div>
 
-      <div className="board-container">
-        <Chessboard 
-          id="BasicBoard" 
-          position={fen} 
-          onPieceDrop={onDrop}
-          boardOrientation="white"
-          customDarkSquareStyle={{ backgroundColor: '#334155' }}
-          customLightSquareStyle={{ backgroundColor: '#cbd5e1' }}
-          customSquareStyles={getCustomSquareStyles()}
-          animationDuration={200}
-        />
+        <div className="board-container">
+          <Chessboard 
+            id="BasicBoard" 
+            position={fen} 
+            onPieceDrop={onDrop}
+            boardOrientation="white"
+            customDarkSquareStyle={{ backgroundColor: '#334155' }}
+            customLightSquareStyle={{ backgroundColor: '#cbd5e1' }}
+            customSquareStyles={getCustomSquareStyles()}
+            animationDuration={200}
+          />
+        </div>
       </div>
       
       <div className="panel-container">
