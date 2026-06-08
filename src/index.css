@@ -277,40 +277,50 @@ select.difficulty-select option {
   background: rgba(255, 255, 255, 0.25);
 }
 
+.board-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 640px;
+}
+
 /* Evaluation Bar */
 .eval-bar-container {
-  width: 24px;
-  min-height: 640px;
+  width: 100%;
+  height: 28px;
   background: #f8fafc; /* white's side */
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
   border: 1px solid var(--glass-border);
   box-shadow: 
-    0 15px 35px rgba(0,0,0,0.4),
+    0 8px 20px rgba(0,0,0,0.4),
     inset 0 0 10px rgba(0,0,0,0.1);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 .eval-bar-fill {
-  width: 100%;
+  height: 100%;
   background: #1e293b; /* black's side */
-  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.5);
 }
 
 .eval-text {
   position: absolute;
-  bottom: 12px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 100%;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   color: #fff;
   mix-blend-mode: difference;
-  letter-spacing: -0.05em;
+  letter-spacing: 0.05em;
 }
 
 /* Review Badge */
