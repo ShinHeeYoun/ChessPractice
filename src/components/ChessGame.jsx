@@ -218,7 +218,7 @@ export default function ChessGame() {
           position={fen} 
           onPieceDrop={onDrop}
           boardOrientation="white"
-          customDarkSquareStyle={{ backgroundColor: '#475569' }}
+          customDarkSquareStyle={{ backgroundColor: '#334155' }}
           customLightSquareStyle={{ backgroundColor: '#cbd5e1' }}
           animationDuration={200}
         />
