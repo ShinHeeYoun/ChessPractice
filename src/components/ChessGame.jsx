@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
+import { masterGames } from '../data/masterGames';
 
 export default function ChessGame() {
   const [game, setGame] = useState(new Chess());
@@ -223,6 +224,16 @@ export default function ChessGame() {
   // Navigation functions
   const goToMove = (index) => {
     if (index < -1 || index >= moveHistory.length) return;
+    
+    setMoveHistory(prev => {
+      const newHist = [...prev];
+      // Inject beforeEval if stepping forward exactly one move in a loaded game
+      if (index === currentMoveIndex + 1 && !newHist[index].beforeEval) {
+        newHist[index] = { ...newHist[index], beforeEval: { ...prevEvalRef.current } };
+      }
+      return newHist;
+    });
+
     const newGame = new Chess();
     for (let i = 0; i <= index; i++) {
       newGame.move(moveHistory[i]);
@@ -242,6 +253,35 @@ export default function ChessGame() {
     setEvalMate(null);
     prevEvalRef.current = { evaluation: 0, evalMate: null };
     updateStatus(newGame);
+  };
+
+  const loadMasterGame = (e) => {
+    const gameId = parseInt(e.target.value, 10);
+    if (isNaN(gameId)) return;
+    
+    const selectedGame = masterGames.find(g => g.id === gameId);
+    if (!selectedGame) return;
+
+    const newGame = new Chess();
+    newGame.loadPgn(selectedGame.pgn);
+    
+    const historyMoves = newGame.history({ verbose: true });
+    const startGame = new Chess();
+    
+    setGame(startGame);
+    setFen(startGame.fen());
+    
+    const formattedHistory = historyMoves.map(move => ({
+      ...move,
+      color: move.color,
+    }));
+    
+    setMoveHistory(formattedHistory);
+    setCurrentMoveIndex(-1);
+    setEvaluation(0);
+    setEvalMate(null);
+    prevEvalRef.current = { evaluation: 0, evalMate: null };
+    updateStatus(startGame);
   };
 
   // Evaluation Bar Math
@@ -375,6 +415,21 @@ export default function ChessGame() {
           ))}
         </div>
         
+        <div className="select-wrapper">
+          <label htmlFor="masterGame">Watch Master Game</label>
+          <select 
+            id="masterGame" 
+            className="difficulty-select"
+            defaultValue=""
+            onChange={loadMasterGame}
+          >
+            <option value="" disabled>Select a Game...</option>
+            {masterGames.map(g => (
+              <option key={g.id} value={g.id}>{g.title}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="select-wrapper">
           <label htmlFor="difficulty">Computer Difficulty</label>
           <select 
