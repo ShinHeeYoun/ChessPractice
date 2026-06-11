@@ -12,6 +12,7 @@ export default function ChessGame() {
   // Game Review State
   const [moveHistory, setMoveHistory] = useState([]);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
+  const [showMenu, setShowMenu] = useState(false);
   
   // Click to move state
   const [moveFrom, setMoveFrom] = useState(null);
@@ -465,9 +466,15 @@ export default function ChessGame() {
             animationDuration={200}
           />
         </div>
+        
+        <button className="menu-toggle-btn" onClick={() => setShowMenu(true)}>
+          ☰ Settings & History
+        </button>
       </div>
       
-      <div className="panel-container">
+      <div className={`menu-backdrop ${showMenu ? 'open' : ''}`} onClick={() => setShowMenu(false)}></div>
+      <div className={`panel-container ${showMenu ? 'open' : ''}`}>
+        <button className="close-menu-btn" onClick={() => setShowMenu(false)}>✕ Close</button>
         <p className="status-text">
           {currentMoveIndex !== moveHistory.length - 1 ? (
             <span className="review-badge">Review</span>
