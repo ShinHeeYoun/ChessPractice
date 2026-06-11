@@ -13,6 +13,10 @@ export default function ChessGame() {
   const [moveHistory, setMoveHistory] = useState([]);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
   
+  // Click to move state
+  const [moveFrom, setMoveFrom] = useState(null);
+  const [optionSquares, setOptionSquares] = useState({});
+  
   // Evaluation State
   const [evaluation, setEvaluation] = useState(0); // in pawns (e.g., 1.5)
   const [evalMate, setEvalMate] = useState(null); // mate in X
@@ -75,7 +79,7 @@ export default function ChessGame() {
 
   // Initialize Engine
   useEffect(() => {
-    engineRef.current = new Worker('/stockfish.js');
+    engineRef.current = new Worker(import.meta.env.BASE_URL + 'stockfish.js');
     
     engineRef.current.onmessage = (event) => {
       const line = event.data;
@@ -197,7 +201,7 @@ export default function ChessGame() {
       const move = gameCopy.move({
         from: sourceSquare,
         to: targetSquare,
-        promotion: piece[1]?.toLowerCase() ?? 'q',
+        promotion: 'q',
       });
 
       if (!move) return false;
@@ -215,10 +219,101 @@ export default function ChessGame() {
         return newHist;
       });
       
+      setMoveFrom(null);
+      setOptionSquares({});
       return true;
     } catch (e) {
       return false;
     }
+  }
+
+  function getMoveOptions(square) {
+    const moves = game.moves({
+      square,
+      verbose: true
+    });
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return false;
+    }
+
+    const newSquares = {};
+    moves.map((move) => {
+      newSquares[move.to] = {
+        background:
+          game.get(move.to) && game.get(move.to).color !== game.get(square).color
+            ? 'radial-gradient(transparent 0%, transparent 80%, rgba(0,0,0,0.3) 80%)'
+            : 'radial-gradient(circle, rgba(0,0,0,.3) 25%, transparent 25%)',
+        borderRadius: '50%'
+      };
+      return move;
+    });
+    newSquares[square] = {
+      background: 'rgba(234, 179, 8, 0.4)'
+    };
+    setOptionSquares(newSquares);
+    return true;
+  }
+
+  function onSquareClick(square) {
+    const isLive = currentMoveIndex === moveHistory.length - 1;
+    if (game.turn() === 'b' && isLive) return;
+
+    // First click: select piece
+    if (!moveFrom) {
+      const hasMoveOptions = getMoveOptions(square);
+      if (hasMoveOptions) setMoveFrom(square);
+      return;
+    }
+
+    // Second click: attempt to move
+    const gameCopy = new Chess(game.fen());
+    try {
+      const move = gameCopy.move({
+        from: moveFrom,
+        to: square,
+        promotion: 'q'
+      });
+
+      if (move) {
+        const beforeEval = { ...prevEvalRef.current };
+        setGame(gameCopy);
+        setFen(gameCopy.fen());
+        updateStatus(gameCopy);
+        
+        setMoveHistory(prev => {
+          const newHist = prev.slice(0, currentMoveIndex + 1);
+          newHist.push({ ...move, beforeEval });
+          setCurrentMoveIndex(newHist.length - 1);
+          return newHist;
+        });
+        setMoveFrom(null);
+        setOptionSquares({});
+      } else {
+        // If clicked on invalid square, check if it's our own piece to select it instead
+        if (game.get(square) && game.get(square).color === game.turn()) {
+          const hasMoveOptions = getMoveOptions(square);
+          if (hasMoveOptions) setMoveFrom(square);
+        } else {
+          setMoveFrom(null);
+          setOptionSquares({});
+        }
+      }
+    } catch (e) {
+      // Invalid move exception
+      if (game.get(square) && game.get(square).color === game.turn()) {
+        const hasMoveOptions = getMoveOptions(square);
+        if (hasMoveOptions) setMoveFrom(square);
+      } else {
+        setMoveFrom(null);
+        setOptionSquares({});
+      }
+    }
+  }
+
+  function onSquareRightClick(square) {
+    setMoveFrom(null);
+    setOptionSquares({});
   }
 
   // Navigation functions
@@ -252,6 +347,8 @@ export default function ChessGame() {
     setEvaluation(0);
     setEvalMate(null);
     prevEvalRef.current = { evaluation: 0, evalMate: null };
+    setMoveFrom(null);
+    setOptionSquares({});
     updateStatus(newGame);
   };
 
@@ -281,6 +378,8 @@ export default function ChessGame() {
     setEvaluation(0);
     setEvalMate(null);
     prevEvalRef.current = { evaluation: 0, evalMate: null };
+    setMoveFrom(null);
+    setOptionSquares({});
     updateStatus(startGame);
   };
 
@@ -292,16 +391,16 @@ export default function ChessGame() {
 
   // Custom Square Styles based on Move Classification
   const getCustomSquareStyles = () => {
-    if (currentMoveIndex < 0 || currentMoveIndex >= moveHistory.length) return {};
+    let styles = { ...optionSquares };
+
+    if (currentMoveIndex < 0 || currentMoveIndex >= moveHistory.length) return styles;
     
     const move = moveHistory[currentMoveIndex];
-    if (!move) return {};
+    if (!move) return styles;
     
     // Default highlight for last move
-    const styles = {
-      [move.from]: { backgroundColor: 'rgba(234, 179, 8, 0.3)' },
-      [move.to]: { backgroundColor: 'rgba(234, 179, 8, 0.4)' }
-    };
+    styles[move.from] = { ...(styles[move.from] || {}), backgroundColor: 'rgba(234, 179, 8, 0.3)' };
+    styles[move.to] = { ...(styles[move.to] || {}), backgroundColor: 'rgba(234, 179, 8, 0.4)' };
     
     if (move.classification) {
       const colorMap = {
@@ -357,6 +456,8 @@ export default function ChessGame() {
             id="BasicBoard" 
             position={fen} 
             onPieceDrop={onDrop}
+            onSquareClick={onSquareClick}
+            onSquareRightClick={onSquareRightClick}
             boardOrientation="white"
             customDarkSquareStyle={{ backgroundColor: '#334155' }}
             customLightSquareStyle={{ backgroundColor: '#cbd5e1' }}
